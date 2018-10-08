@@ -18,15 +18,10 @@ object Main {
           .config("spark.driver.memory", "5g")
           .getOrCreate()
 
-        val path = getClass().getResource("/allCountries.txt").toString
+        val path = getClass().getResource("/sample.txt").toString
         val processor = new GeoProcessor(spark, path)
 
-        //example for printing
-        val filtered = processor.filterData(processor.file)
-
-        filtered.take(5).foreach(x => println(x.mkString(" ")))
-
-        processor.filterElevation("FI", filtered).take(10).foreach(x => print(x + " "))
+        processor.hotelsInArea(37.80626, -122.41628)
 
         //stop spark
         spark.stop()

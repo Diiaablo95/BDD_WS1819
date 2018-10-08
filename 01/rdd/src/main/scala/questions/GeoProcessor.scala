@@ -3,11 +3,14 @@ package questions
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkConf
-import scala.math._
 
+import scala.math._
 import org.apache.spark.graphx._
 import org.apache.spark.graphx.Edge
 import org.apache.spark.graphx.Graph
+import questions.Main.getClass
+
+import scala.io.Source
 
 
 /** GeoProcessor provides functionalites to 
@@ -76,12 +79,13 @@ class GeoProcessor(spark: SparkSession, filePath:String) {
     * e.g ("hotel", 234), ("airport", 120), ("new", 12)
     */
     def mostCommonWords(data: RDD[Array[String]]): RDD[(String,Int)] = {
-      //TODO: Here
-        val t1 = data.map { a => a.map { b => b.split(" ") } }
-        val t2 = t1.groupBy { c => c }
-        val t3 = t2.map { d => (d._1, d._2.count(_ => true)) }
-        val t4 = t3.sortBy { e => e._2 }
-        return t4
+        print(data)
+        val names = data.map { a => a{0} }
+        val words = names.flatMap { a => a.split(" ") }
+        val groupedWords = words.groupBy { a => a }
+        val wordsCount = groupedWords.map { a => (a._1, a._2.size) }
+        val wordsByFrequency = wordsCount.sortBy { a => a._2 }
+        wordsByFrequency
     }
 
     /** mostCommonCountry tells which country has the most
@@ -94,7 +98,17 @@ class GeoProcessor(spark: SparkSession, filePath:String) {
     *         doesn't have that entry.
     */
     def mostCommonCountry(data: RDD[Array[String]], path: String): String = {
-        ???
+        val mostFrequentCountryCode = data.map { a => a{1} }.groupBy { b => b }.sortBy { c => c._2.size }.first()._1
+
+        val csvFile = this.spark.read.format("csv").option("header", "true").load(path)
+
+        val mostFrequentCountryNameEntry = csvFile.filter { r => r.getString(1).equals(mostFrequentCountryCode) }.select("Name").first()
+
+        if (mostFrequentCountryNameEntry == null) {
+          ""
+        } else {
+          mostFrequentCountryNameEntry.getString(0)
+        }
     }
 
 //
@@ -117,7 +131,32 @@ class GeoProcessor(spark: SparkSession, filePath:String) {
     * @return number of hotels in area
     */
     def hotelsInArea(lat: Double, long: Double): Int = {
-        ???
+
+        val haversineDistance = (lat1:Double, lon1:Double, lat2:Double, lon2:Double) => {
+            val dLat = (lat2 - lat1).toRadians
+            val dLon= (lon2 - lon1).toRadians
+            val EARTH_RADIUS = 6378137d
+
+            val a = math.sin(dLat / 2) * math.sin(dLat / 2) + math.sin(dLon / 2) * math.sin(dLon / 2) * math.cos(lat1) * math.cos(lat2)
+            val c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+            EARTH_RADIUS * c
+        }
+
+        val a = this.file.map { a => a.split("\t") }
+        var asd = a.count()
+        val b = a.filter { b => b{1}.split(" ").exists(_.equalsIgnoreCase("hotel")) }
+        asd = b.count()
+        val c = b.map { c => (c{4}.toDouble, c{5}.toDouble) }
+        asd = c.count()
+        val d = c.filter { d =>
+          val distance = haversineDistance(lat, long, d._1, d._2)
+          distance <= 10000
+        }
+        asd = d.count()
+        val e = d.count().intValue()
+
+//        this.file.map { a => a.split("\t") }.map { b => (b{4}.toDouble, b{5}.toDouble) }.filter { c => distance(lat, long, c._1, c._2) <= 10000d }.count()intValue()
+        e
     }
 
     //GraphX exercises
@@ -192,3 +231,43 @@ class GeoProcessor(spark: SparkSession, filePath:String) {
 object GeoProcessor {
     val studentId = "727134"
 }
+
+//object Haversine {
+//
+//  val EARTH_RADIUS = 6378137d
+//
+//  /**
+//    * Calculates distance basing on [[EARTH_RADIUS]]. The result is in meters.
+//    *
+//    * @param startLon - a start lon
+//    * @param startLat - a start lan
+//    * @param endLon   - an end lon
+//    * @param endLat   - an end lat
+//    */
+//  def apply(startLon: Double, startLat: Double, endLon: Double, endLat: Double): Double =
+//    apply(startLon, startLat, endLon, endLat, EARTH_RADIUS)
+//
+//  /**
+//    * Calculates distance, in R units
+//    *
+//    * @param startLon - a start lon
+//    * @param startLat - a start lan
+//    * @param endLon   - an end lon
+//    * @param endLat   - an end lat
+//    * @param R        - Earth radius, can be in any unit, in fact this value
+//    *                   defines a physical meaning of this function
+//    */
+//  def apply(startLon: Double, startLat: Double, endLon: Double, endLat: Double, R: Double): Double = {
+//    val dLat = math.toRadians(endLat - startLat)
+//    val dLon = math.toRadians(endLon - startLon)
+//    val lat1 = math.toRadians(startLat)
+//    val lat2 = math.toRadians(endLat)
+//
+//    val a =
+//      math.sin(dLat / 2) * math.sin(dLat / 2) +
+//        math.sin(dLon / 2) * math.sin(dLon / 2) * math.cos(lat1) * math.cos(lat2)
+//    val c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+//
+//    R * c
+//  }
+//}
