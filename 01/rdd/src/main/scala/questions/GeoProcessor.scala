@@ -1,8 +1,9 @@
 package questions
 
+import org.apache.spark.graphx.impl.GraphImpl
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.rdd.RDD
-import org.apache.spark.graphx.Graph
+import org.apache.spark.graphx.{Graph, PartitionID, PartitionStrategy, VertexId}
 
 import scala.util.matching.Regex
 
@@ -93,15 +94,15 @@ class GeoProcessor(spark: SparkSession, filePath:String) {
     *         doesn't have that entry.
     */
     def mostCommonCountry(data: RDD[Array[String]], path: String): String = {
-        val mostFrequentCountryCode = data
-          .map { a => a{1} }
-          .groupBy { b => b }
-          .sortBy { c => c._2.size }.first()._1
+      val mostFrequentCountryCode = data
+        .map { a => a {1}}
+        .groupBy { b => b }
+        .sortBy({ c => c._2.size }, false).first()._1
 
-        val mostFrequentCountryNameEntry = this.spark.read.format("csv").option("header", "true").load(path)
-          .filter { r => r.getString(1).equals(mostFrequentCountryCode) }.select("Name").first()
+      val mostFrequentCountryNameEntry = this.spark.read.format("csv").option("header", "true").load(path)
+        .filter { r => r.getString(1).equals(mostFrequentCountryCode) }.select("Name")
 
-        if(mostFrequentCountryNameEntry == null) "" else mostFrequentCountryNameEntry.getString(0)
+      if (mostFrequentCountryNameEntry.count() > 0) mostFrequentCountryNameEntry.first().getString(0) else ""
     }
 
     /**
@@ -196,7 +197,9 @@ class GeoProcessor(spark: SparkSession, filePath:String) {
             (m.group("firstVertex").toLong, m.group("secondVertex").toLong)
           })
 
-        Graph.fromEdgeTuples(rawEdges, 0)
+        val graph = Graph.fromEdgeTuples(rawEdges, 1, Some(PartitionStrategy.RandomVertexCut)).mapVertices((id, _) => id.toInt)
+
+        graph
     }
 
     /**
