@@ -2,15 +2,9 @@ package questions
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.rdd.RDD
-import org.apache.spark.SparkConf
-
-import scala.math._
-import org.apache.spark.graphx._
-import org.apache.spark.graphx.Edge
 import org.apache.spark.graphx.Graph
-import questions.Main.getClass
 
-import scala.io.Source
+import scala.util.matching.Regex
 
 
 /** GeoProcessor provides functionalites to 
@@ -25,7 +19,7 @@ class GeoProcessor(spark: SparkSession, filePath:String) {
 
     //read the file and create an RDD
     //DO NOT EDIT
-    val file = spark.sparkContext.textFile(filePath)
+    val file = this.spark.sparkContext.textFile(filePath)
 
     /** filterData removes unnecessary fields and splits the data so
     * that the RDD looks like RDD(Array("<name>","<countryCode>","<dem>"),...))
@@ -42,7 +36,9 @@ class GeoProcessor(spark: SparkSession, filePath:String) {
         * Finally you should take the appropriate fields.
         * Function zipWithIndex might be useful.
         */
-        data.map { rddLine => rddLine.split("\t") }.map { splittedLine => Array(splittedLine{1}, splittedLine{8}, splittedLine{16}) }
+        data
+          .map { a => a.split("\t") }
+          .map { a => Array(a{1}, a{8}, a{16}) }
     }
 
 
@@ -54,10 +50,10 @@ class GeoProcessor(spark: SparkSession, filePath:String) {
     * @return RDD containing only elevation information
     */
     def filterElevation(countryCode: String, data: RDD[Array[String]]): RDD[Int] = {
-        data.filter { a => a{1}.equals(countryCode) }.map { b => b{2}.toInt }
+        data
+          .filter { a => a{1}.equals(countryCode) }
+          .map { a => a{2}.toInt }
     }
-
-
 
     /** elevationAverage calculates the elevation(dem) average
     * to specific dataset.
@@ -79,13 +75,12 @@ class GeoProcessor(spark: SparkSession, filePath:String) {
     * e.g ("hotel", 234), ("airport", 120), ("new", 12)
     */
     def mostCommonWords(data: RDD[Array[String]]): RDD[(String,Int)] = {
-        print(data)
-        val names = data.map { a => a{0} }
-        val words = names.flatMap { a => a.split(" ") }
-        val groupedWords = words.groupBy { a => a }
-        val wordsCount = groupedWords.map { a => (a._1, a._2.size) }
-        val wordsByFrequency = wordsCount.sortBy { a => a._2 }
-        wordsByFrequency
+        data
+          .map { a => a{0} }
+          .flatMap { a => a.split(" ") }
+          .groupBy { a => a }
+          .map { a => (a._1, a._2.size) }
+          .sortBy { a => a._2 }
     }
 
     /** mostCommonCountry tells which country has the most
@@ -98,20 +93,17 @@ class GeoProcessor(spark: SparkSession, filePath:String) {
     *         doesn't have that entry.
     */
     def mostCommonCountry(data: RDD[Array[String]], path: String): String = {
-        val mostFrequentCountryCode = data.map { a => a{1} }.groupBy { b => b }.sortBy { c => c._2.size }.first()._1
+        val mostFrequentCountryCode = data
+          .map { a => a{1} }
+          .groupBy { b => b }
+          .sortBy { c => c._2.size }.first()._1
 
-        val csvFile = this.spark.read.format("csv").option("header", "true").load(path)
+        val mostFrequentCountryNameEntry = this.spark.read.format("csv").option("header", "true").load(path)
+          .filter { r => r.getString(1).equals(mostFrequentCountryCode) }.select("Name").first()
 
-        val mostFrequentCountryNameEntry = csvFile.filter { r => r.getString(1).equals(mostFrequentCountryCode) }.select("Name").first()
-
-        if (mostFrequentCountryNameEntry == null) {
-          ""
-        } else {
-          mostFrequentCountryNameEntry.getString(0)
-        }
+        if(mostFrequentCountryNameEntry == null) "" else mostFrequentCountryNameEntry.getString(0)
     }
 
-//
     /**
     * How many hotels are within 10 km (<=10000.0) from
     * given latitude and longitude?
@@ -142,21 +134,12 @@ class GeoProcessor(spark: SparkSession, filePath:String) {
             EARTH_RADIUS * c
         }
 
-        val a = this.file.map { a => a.split("\t") }
-        var asd = a.count()
-        val b = a.filter { b => b{1}.split(" ").exists(_.equalsIgnoreCase("hotel")) }
-        asd = b.count()
-        val c = b.map { c => (c{4}.toDouble, c{5}.toDouble) }
-        asd = c.count()
-        val d = c.filter { d =>
-          val distance = haversineDistance(lat, long, d._1, d._2)
-          distance <= 10000
-        }
-        asd = d.count()
-        val e = d.count().intValue()
-
-//        this.file.map { a => a.split("\t") }.map { b => (b{4}.toDouble, b{5}.toDouble) }.filter { c => distance(lat, long, c._1, c._2) <= 10000d }.count()intValue()
-        e
+        this.file
+          .map { a => a.split("\t") }
+          .filter { a => a{1}.split(" ")
+            .exists(_.equalsIgnoreCase("hotel")) }
+          .map { a => (a{4}.toDouble, a{5}.toDouble) }
+          .filter { d => haversineDistance(lat, long, d._1, d._2) <= 10000 }.count().intValue()
     }
 
     //GraphX exercises
@@ -200,7 +183,20 @@ class GeoProcessor(spark: SparkSession, filePath:String) {
     *
     */
     def loadSocial(path: String): Graph[Int,Int] = {
-        ???
+
+        val regexString = "^\\s*([1-9][0-9]*)\\s*\\|\\s*([1-9][0-9]*)\\s*$"
+        val compiledRegex = new Regex(regexString, "firstVertex", "secondVertex")
+
+        val graphRDD = this.spark.sparkContext.textFile(path)
+
+        val rawEdges = graphRDD
+          .filter(_.matches(regexString))
+          .map({ validEdgeInfo =>
+            val m = compiledRegex.findFirstMatchIn(validEdgeInfo).get
+            (m.group("firstVertex").toLong, m.group("secondVertex").toLong)
+          })
+
+        Graph.fromEdgeTuples(rawEdges, 0)
     }
 
     /**
@@ -210,7 +206,8 @@ class GeoProcessor(spark: SparkSession, filePath:String) {
     * @return vertex_id as Int
     */
     def mostActiveUser(graph: Graph[Int,Int]): Int = {
-        ???
+        graph.outDegrees
+          .reduce({ (a, b) => if (a._2 > b._2) a else b })._1.toInt
     }
 
     /**
@@ -221,9 +218,12 @@ class GeoProcessor(spark: SparkSession, filePath:String) {
     * @return user with highest pageRank
     */
     def pageRankHighest(graph: Graph[Int,Int]): Int = {
-        ???
+      graph.pageRank(0.0001).vertices
+        .join(graph.vertices)
+        .sortBy(_._2._1, ascending = false).first()._1.toInt
     } 
 }
+
 /**
 *
 *  Change the student id
@@ -231,43 +231,3 @@ class GeoProcessor(spark: SparkSession, filePath:String) {
 object GeoProcessor {
     val studentId = "727134"
 }
-
-//object Haversine {
-//
-//  val EARTH_RADIUS = 6378137d
-//
-//  /**
-//    * Calculates distance basing on [[EARTH_RADIUS]]. The result is in meters.
-//    *
-//    * @param startLon - a start lon
-//    * @param startLat - a start lan
-//    * @param endLon   - an end lon
-//    * @param endLat   - an end lat
-//    */
-//  def apply(startLon: Double, startLat: Double, endLon: Double, endLat: Double): Double =
-//    apply(startLon, startLat, endLon, endLat, EARTH_RADIUS)
-//
-//  /**
-//    * Calculates distance, in R units
-//    *
-//    * @param startLon - a start lon
-//    * @param startLat - a start lan
-//    * @param endLon   - an end lon
-//    * @param endLat   - an end lat
-//    * @param R        - Earth radius, can be in any unit, in fact this value
-//    *                   defines a physical meaning of this function
-//    */
-//  def apply(startLon: Double, startLat: Double, endLon: Double, endLat: Double, R: Double): Double = {
-//    val dLat = math.toRadians(endLat - startLat)
-//    val dLon = math.toRadians(endLon - startLon)
-//    val lat1 = math.toRadians(startLat)
-//    val lat2 = math.toRadians(endLat)
-//
-//    val a =
-//      math.sin(dLat / 2) * math.sin(dLat / 2) +
-//        math.sin(dLon / 2) * math.sin(dLon / 2) * math.cos(lat1) * math.cos(lat2)
-//    val c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-//
-//    R * c
-//  }
-//}

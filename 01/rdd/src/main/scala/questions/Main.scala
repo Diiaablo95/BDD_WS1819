@@ -1,8 +1,6 @@
 package questions
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.rdd.RDD
-import org.apache.spark.SparkConf
 import org.apache.log4j.Logger
 import org.apache.log4j.Level
 
@@ -21,7 +19,7 @@ object Main {
         val path = getClass().getResource("/sample.txt").toString
         val processor = new GeoProcessor(spark, path)
 
-        processor.hotelsInArea(37.80626, -122.41628)
+        processor.loadSocial(getClass().getResource("/graph_sample.txt").toString())
 
         //stop spark
         spark.stop()
