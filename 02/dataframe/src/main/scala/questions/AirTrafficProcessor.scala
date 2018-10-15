@@ -3,6 +3,9 @@ package questions
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.expressions.Window
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.functions._
+
 /** AirTrafficProcessor provides functionalites to
 * process air traffic data
 * Spark SQL tables available from start:
@@ -113,8 +116,11 @@ class AirTrafficProcessor(spark: SparkSession,
     * @return created DataFrame with correct column types.
     */
     def loadDataAndRegister(path: String): DataFrame = {
-        ???
-    }
+        val trafficDf = this.spark.sqlContext.read.format("com.databricks.spark.csv").option("header", "true").option("inferSchema", "true").option("nullValue", "NA").load(path)
+        trafficDf.show()
+        trafficDf.createOrReplaceTempView("airtraffic")
+        trafficDf
+     }
 
     //USE can use SPARK SQL or DataFrame transformations
 
@@ -139,7 +145,9 @@ class AirTrafficProcessor(spark: SparkSession,
     * are TailNum and count
     */
     def flightCount(df: DataFrame): DataFrame = {
-        ???
+        val result = df.select($"TailNum").groupBy("TailNum").agg(count(lit(1)).as("count")).sort(desc("count"))
+        result.show()
+        result
     }
 
 
@@ -161,7 +169,9 @@ class AirTrafficProcessor(spark: SparkSession,
     * Columns FlightNum and Dest are included.
     */
     def cancelledDueToSecurity(df: DataFrame): DataFrame = {
-        ???
+        val result = df.select($"FlightNum", $"Dest").where("CancellationCode = 'D'")
+        result.show()
+        result
     }
 
     /** What was the longest weather delay between January
@@ -178,7 +188,16 @@ class AirTrafficProcessor(spark: SparkSession,
     * was due to weather.
     */
     def longestWeatherDelay(df: DataFrame): DataFrame = {
-        ???
+        val result = df.filter(row => {
+            val month = row.getAs[Int]("Month")
+            val dayOfMonth = row.getAs[Int]("DayofMonth")
+
+            (month == 1 && new Range(1, 31, 1).contains(dayOfMonth)) ||
+            (month == 2 && new Range(1, 29, 1).contains(dayOfMonth)) ||
+            (month == 3 && new Range(1, 31, 1).contains(dayOfMonth))
+        }).toDF().agg(max($"WeatherDelay"))
+        result.show()
+        result
     }
 
     /** Which airliners didn't fly.
