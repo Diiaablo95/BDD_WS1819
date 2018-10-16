@@ -282,7 +282,32 @@ class AirTrafficProcessor(spark: SparkSession,
     * airport ordered in ascending order.
     */
     def timeSpentTaxiing(df: DataFrame): DataFrame = {
-        ???
+        val projectedDF = df.select($"Origin", $"Dest", $"TaxiIn", $"TaxiOut")
+        val taxiInMean = projectedDF.groupBy($"Origin").mean("TaxiIn")
+        val taxiOutMean = projectedDF.groupBy($"Dest").mean("TaxiOut")
+        val taxiMean = taxiInMean.join(taxiOutMean, $"Origin" === $"Dest", "outer").toDF()
+
+        val result = taxiMean.map(row => {
+
+            val avg = {
+                if (row.isNullAt(1)) row.getDouble(3)
+                else if (row.isNullAt(3)) row.getDouble(1)
+                else (row.getDouble(1) + row.getDouble(3)) / 2
+            }
+
+            val airportCode = {
+                if (row.isNullAt(0)) row.getString(2)
+                else row.getString(0)
+            }
+
+            Array(airportCode, avg)
+        })
+        result.toDF().show()
+//        taxiInMean.show()
+//        taxiOutMean.show()
+//        taxiMean.show()
+
+        taxiInMean
     }
 
     /** What is the median travel distance?
