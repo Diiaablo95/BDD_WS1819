@@ -195,7 +195,7 @@ class AirTrafficProcessor(spark: SparkSession,
             (month == 1 && new Range(1, 31, 1).contains(dayOfMonth)) ||
             (month == 2 && new Range(1, 29, 1).contains(dayOfMonth)) ||
             (month == 3 && new Range(1, 31, 1).contains(dayOfMonth))
-        }).toDF().agg(max($"WeatherDelay"))
+        }).toDF().agg(max($"WeatherDelay").as("_c0"))
         result.show()
         result
     }
@@ -217,7 +217,9 @@ class AirTrafficProcessor(spark: SparkSession,
     * @return airliner descriptions
     */
     def didNotFly(df: DataFrame): DataFrame = {
-        ???
+        val result = df.select($"UniqueCarrier").where("Cancelled = 1").join(this.carriersTable.withColumnRenamed("Code", "UniqueCarrier"), Seq("UniqueCarrier")).select($"Description").distinct().toDF()
+        result.show()
+        result
     }
 
     /** Find the airliners which travel
@@ -244,7 +246,12 @@ class AirTrafficProcessor(spark: SparkSession,
     * in descending order.
     */
     def flightsFromVegasToJFK(df: DataFrame): DataFrame = {
-        ???
+        val projectedFlightsFromVegasToJFK = df.select($"UniqueCarrier").where("Origin = 'LAS' AND Dest = 'JFK'").toDF()
+        projectedFlightsFromVegasToJFK.show()
+
+        val joinedFlightInfo = projectedFlightsFromVegasToJFK.join(this.carriersTable.withColumnRenamed("Code", "UniqueCarrier"), "UniqueCarrier").select($"Description").groupBy($"Description").count().sort(desc("count")).withColumnRenamed("count", "Num")
+        joinedFlightInfo.show()
+        joinedFlightInfo
     }
 
     /** How much time airplanes spend on moving from

@@ -54,7 +54,7 @@ class AirTrafficProcessorTest extends FlatSpec with GivenWhenThen with AppendedC
     //initialize AirTrafficProcessor
     val processor = new AirTrafficProcessor(spark, flightPath, airportPath, carrierPath)
 
-    val df = spark.read.parquet(getClass().getResource("/sample.parquet/").toString().drop(5))
+//    val df = spark.read.parquet(getClass().getResource("/sample.parquet/").toString().drop(5))
 
     info("----------------------\nusing sample.csv file\n----------------------")
 
@@ -68,7 +68,10 @@ class AirTrafficProcessorTest extends FlatSpec with GivenWhenThen with AppendedC
 //        //df2.collect().foreach(x => dfC.contains(x) should equal (true) withClue("Can't find value: " + x + " from " + dfC))
 //    }
     //override sql table
+    //################################# REPLACE NORMAL TEST DATAFRAME WITH CUSTOM ONE #################################
+    val df = processor.loadDataAndRegister(flightPath)
     df.createOrReplaceTempView("airtraffic")
+    //#################################################################################################################
 
 //    "flightCount" should "calculate the total flighttime per airplane" in {
 //        val res: Array[(String,Int)] = Array(
@@ -79,24 +82,24 @@ class AirTrafficProcessorTest extends FlatSpec with GivenWhenThen with AppendedC
 //        res.deep should equal (df2.deep)
 //    }
 
-
 //    "cancelledDueToSecurity" should "produce a DataFrame having all of the "+
 //        "flights which were cancelled due to security" in {
 //
 //        processor.cancelledDueToSecurity(df).collect().isEmpty should equal (true) withClue("Should be empty")
 //    }
 //
-//
+
 //    "longestWeatherDelay" should "calculate the maximux weather delay" in {
 //
 //        processor.longestWeatherDelay(df).collect().deep should equal (Array(Row(null))) withClue("Should be empty(null row)")
 //    }
 //
-    "didNotFly" should "calculate which airliners didn't fly" in {
-        processor.didNotFly(df).count() should equal (1490) withClue("Count should be: 1490")
-    }
+//    "didNotFly" should "calculate which airliners didn't fly" in {
+//        processor.didNotFly(df).count() should equal (1490) withClue("Count should be: 1490")
+//    }
 //
 //
+    processor.flightsFromVegasToJFK(df)
 //    "flightsFromVegasToJFK" should "tell which airliners travel from Vegas "+
 //        "to JFK and how often" in {
 //        processor.flightsFromVegasToJFK(df).collect().isEmpty should equal (true) withClue("should be empty")
