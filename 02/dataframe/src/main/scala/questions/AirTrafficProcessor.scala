@@ -1,5 +1,7 @@
 package questions
 
+import org.apache.commons.math3.fitting.leastsquares.LeastSquaresBuilder
+import org.apache.commons.math3.stat.regression.SimpleRegression
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
@@ -414,14 +416,22 @@ class AirTrafficProcessor(spark: SparkSession,
     */
     def leastSquares(df: DataFrame):(Double, Double) = {
         val filteredDF = df.select($"DepDelay", $"WeatherDelay").where($"DepDelay" >= 0)
-        val averagesRow = filteredDF.agg(avg($"DepDelay"), avg($"WeatherDelay")).first()
-
-        val averages = (averagesRow.getDouble(0), averagesRow.getDouble(1))
+//        val averagesRow = filteredDF.agg(avg($"DepDelay"), avg($"WeatherDelay")).first()
+//
+//        val averages = (averagesRow.getDouble(0), averagesRow.getDouble(1))
 
         filteredDF.show()
-        println(averages)
 
-        averages
+        val observations = filteredDF.map(row => {
+            Array(row.getAs[Int]("DepDelay").toDouble, row.getAs[Int]("WeatherDelay").toDouble)
+        }).collect()
+
+        val simpleRegressionModel = new SimpleRegression(true)
+        simpleRegressionModel.addData(observations)
+
+        val (intercept, slope) = (simpleRegressionModel.getIntercept, simpleRegressionModel.getSlope)
+
+        (intercept, slope)
     }
 
     /**
@@ -491,5 +501,5 @@ class AirTrafficProcessor(spark: SparkSession,
 *  Change the student id
 */
 object AirTrafficProcessor {
-    val studentId = "XXXXXX"
+    val studentId = "727134"
 }
