@@ -2,8 +2,6 @@ package questions
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.expressions.Window
-import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
 
 /** AirTrafficProcessor provides functionalites to
@@ -300,14 +298,11 @@ class AirTrafficProcessor(spark: SparkSession,
                 else row.getString(0)
             }
 
-            Array(airportCode, avg)
-        })
-        result.toDF().show()
-//        taxiInMean.show()
-//        taxiOutMean.show()
-//        taxiMean.show()
+            (airportCode, avg)
+        }).toDF().withColumnRenamed("_1", "Airport").withColumnRenamed("_2", "taxi")
 
-        taxiInMean
+        result.show()
+        result
     }
 
     /** What is the median travel distance?
@@ -323,7 +318,12 @@ class AirTrafficProcessor(spark: SparkSession,
     * @return DataFrame containing the median value
     */
     def distanceMedian(df: DataFrame): DataFrame = {
-        ???
+        val medianValue = df.select($"Distance").stat.approxQuantile("Distance", Array(0.5), 0)(0)
+
+        val result = df.withColumn("_c0", lit(medianValue)).select($"_c0").limit(1).toDF()
+        result.show()
+
+        result
     }
 
     /** What is the carrier delay, below which 95%
@@ -339,7 +339,12 @@ class AirTrafficProcessor(spark: SparkSession,
     * @return DataFrame containing the carrier delay
     */
     def score95(df: DataFrame): DataFrame = {
-        ???
+        val percentile = df.select($"CarrierDelay").stat.approxQuantile("CarrierDelay", Array(0.95), 0)(0)
+
+        val result = df.withColumn("_c0", lit(percentile)).select($"_c0").limit(1).toDF()
+        result.show()
+
+        result
     }
 
 
@@ -373,7 +378,24 @@ class AirTrafficProcessor(spark: SparkSession,
     * @return DataFrame containing columns airport, city and percentage
     */
     def cancelledFlights(df: DataFrame): DataFrame = {
-        ???
+        val filteredDF = df.select($"Origin", $"Cancelled").withColumnRenamed("Origin", "iata")
+        val filteredAirportTable = this.airportsTable.select($"iata", $"airport", $"city")
+        val joinedTables = filteredAirportTable.join(filteredDF, Seq("iata"))
+
+        val totalFlightsPerAirport = joinedTables.groupBy($"iata").agg(count($"Cancelled"))
+        val cancelledFlightsPerAirport = joinedTables.groupBy($"iata").agg(sum($"Cancelled"))
+        val averageCancelledFlightsPerAirport = totalFlightsPerAirport.join(cancelledFlightsPerAirport, Seq("iata")).map(row => {
+            val totalFlights = row.getLong(1)
+            val cancelledFlights = row.getLong(2)
+
+            (row.getString(0), cancelledFlights.toDouble / totalFlights.toDouble)
+        }).toDF().withColumnRenamed("_1", "iata").withColumnRenamed("_2", "percentage")
+
+        val result = filteredAirportTable.join(averageCancelledFlightsPerAirport, Seq("iata")).select($"airport", $"city", $"percentage").orderBy(desc("percentage"), desc("airport"))
+
+        result.show()
+
+        result
     }
 
     /**
@@ -391,7 +413,15 @@ class AirTrafficProcessor(spark: SparkSession,
     * @return tuple, which has the constant term first and the slope second
     */
     def leastSquares(df: DataFrame):(Double, Double) = {
-        ???
+        val filteredDF = df.select($"DepDelay", $"WeatherDelay").where($"DepDelay" >= 0)
+        val averagesRow = filteredDF.agg(avg($"DepDelay"), avg($"WeatherDelay")).first()
+
+        val averages = (averagesRow.getDouble(0), averagesRow.getDouble(1))
+
+        filteredDF.show()
+        println(averages)
+
+        averages
     }
 
     /**

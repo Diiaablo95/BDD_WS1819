@@ -104,7 +104,6 @@ class AirTrafficProcessorTest extends FlatSpec with GivenWhenThen with AppendedC
 //        processor.flightsFromVegasToJFK(df).collect().isEmpty should equal (true) withClue("should be empty")
 //    }
 //
-    processor.timeSpentTaxiing(df)
 //    "timeSpentTaxiing" should "tell by airport how long airplanes taxi "+
 //        "by average" in {
 //        val res = Array(("PIT",5.0), ("CVG",6.166666666666667), ("ATL",9.0), ("TPA",9.25), ("LGA",10.0), ("BWI",11.0), ("MCO",11.0), ("SNA",14.5), ("SLC",14.5), ("PHL",17.0))
@@ -124,6 +123,7 @@ class AirTrafficProcessorTest extends FlatSpec with GivenWhenThen with AppendedC
 //        processor.cancelledFlights(df).collect().isEmpty should equal (true) withClue("should be empty")
 //    }
 //
+    processor.leastSquares(df)
 //    "leastSquares" should "estimate the WeatherDelay" in {
 //        processor.leastSquares(df) should equal ((0.0,0.0))
 //    }
