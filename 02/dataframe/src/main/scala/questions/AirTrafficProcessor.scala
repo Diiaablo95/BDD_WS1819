@@ -415,21 +415,20 @@ class AirTrafficProcessor(spark: SparkSession,
     * @return tuple, which has the constant term first and the slope second
     */
     def leastSquares(df: DataFrame):(Double, Double) = {
-        val filteredDF = df.select($"DepDelay", $"WeatherDelay").where($"DepDelay" >= 0)
-//        val averagesRow = filteredDF.agg(avg($"DepDelay"), avg($"WeatherDelay")).first()
-//
-//        val averages = (averagesRow.getDouble(0), averagesRow.getDouble(1))
+        val filteredDF = df.select($"DepDelay", $"WeatherDelay").where($"DepDelay" >= 0).groupBy($"DepDelay").agg(avg($"WeatherDelay").as("WeatherDelay"))
 
         filteredDF.show()
 
         val observations = filteredDF.map(row => {
-            Array(row.getAs[Int]("DepDelay").toDouble, row.getAs[Int]("WeatherDelay").toDouble)
+            Array(row.getAs[Int]("DepDelay").toDouble, row.getAs[Double]("WeatherDelay"))
         }).collect()
 
         val simpleRegressionModel = new SimpleRegression(true)
         simpleRegressionModel.addData(observations)
 
         val (intercept, slope) = (simpleRegressionModel.getIntercept, simpleRegressionModel.getSlope)
+
+        println("Intercept: " + intercept + ". Slope: " + slope)
 
         (intercept, slope)
     }

@@ -123,11 +123,11 @@ class AirTrafficProcessorTest extends FlatSpec with GivenWhenThen with AppendedC
 //        processor.cancelledFlights(df).collect().isEmpty should equal (true) withClue("should be empty")
 //    }
 //
+    processor.leastSquares(df)
 //    "leastSquares" should "estimate the WeatherDelay" in {
 //        processor.leastSquares(df) should equal ((0.0,0.0))
 //    }
 //
-    processor.runningAverage(df)
 //    "runningAverage" should "calculate the running average for DepDelay" in {
 //        processor.runningAverage(df).collect().deep should equal (Array(Row("2008-05-10",3.7)).deep)
 //    }
