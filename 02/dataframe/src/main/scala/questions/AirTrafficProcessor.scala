@@ -1,9 +1,12 @@
 package questions
 
-import org.apache.commons.math3.fitting.leastsquares.LeastSquaresBuilder
+import java.time.{Duration, LocalDate}
+import java.time.format.DateTimeFormatter
+
 import org.apache.commons.math3.stat.regression.SimpleRegression
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
 
 /** AirTrafficProcessor provides functionalites to
@@ -492,7 +495,17 @@ class AirTrafficProcessor(spark: SparkSession,
     * ordered by 'date'
     */
     def runningAverage(df: DataFrame): DataFrame = {
-        ???
+
+        //TODO: Fix sample.csv with correct data
+        //TODO: Properly format output table
+        val aggregatedDF = df.select($"Year", $"Month", $"DayofMonth", $"DepDelay").groupBy($"Year", $"Month", $"DayofMonth").avg("DepDelay").withColumnRenamed("avg(DepDelay)", "daily_avg")
+        aggregatedDF.show()
+
+        val window = Window.partitionBy($"Year", $"Month", $"DayofMonth").orderBy($"Year", $"Month", $"DayofMonth").rowsBetween(-5, 5)
+        val result = aggregatedDF.withColumn("moving_average", avg("daily_avg").over(window)).sort($"Year", $"Month", $"DayofMonth")
+
+        result.show()
+        result
     }
 }
 /**
