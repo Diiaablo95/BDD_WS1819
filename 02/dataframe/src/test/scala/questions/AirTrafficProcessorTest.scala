@@ -17,10 +17,10 @@ import org.scalatest.time.SpanSugar._
 
 
 /**
-  * Tests for AirTrafficProcessor
-  *
-  *
-  */
+* Tests for AirTrafficProcessor
+*
+*
+*/
 class AirTrafficProcessorTest extends FlatSpec with GivenWhenThen with AppendedClues with TimeLimitedTests {
     Logger.getLogger("org").setLevel(Level.OFF)
     Logger.getLogger("akka").setLevel(Level.OFF)
@@ -33,21 +33,21 @@ class AirTrafficProcessorTest extends FlatSpec with GivenWhenThen with AppendedC
             testThread.stop()
         }
     }
-
+    
     //time limit for each test
     def timeLimit = 100 seconds
 
     //initialize spark
     val spark = SparkSession.builder
-        .master("local[*]")
-        .appName("main")
-        .config("spark.driver.memory", "5g")
-        .config("spark.dynamicAllocation.enabled","true")
-        .config("spark.shuffle.service.enabled","true")
-        .getOrCreate()
+      .master("local[*]")
+      .appName("main")
+      .config("spark.driver.memory", "5g")
+      .config("spark.dynamicAllocation.enabled","true")
+      .config("spark.shuffle.service.enabled","true")
+      .getOrCreate()
 
     import spark.implicits._
-
+    
     val flightPath = getClass().getResource("/sample.csv").toString().drop(5)
     val airportPath = getClass().getResource("/airports.csv").toString().drop(5)
     val carrierPath = getClass().getResource("/carriers.csv").toString().drop(5)
@@ -59,7 +59,7 @@ class AirTrafficProcessorTest extends FlatSpec with GivenWhenThen with AppendedC
     info("----------------------\nusing sample.csv file\n----------------------")
 
     "loadDataAndRegister" should "load the csv file register it as "+
-        "a table 'airtraffic' and finally return a DataFrame" in {
+            "a table 'airtraffic' and finally return a DataFrame" in {
         val df2 = processor.loadDataAndRegister(flightPath)
         val dfC = df.collect().map(_.toSeq.toSet)
 
@@ -69,8 +69,6 @@ class AirTrafficProcessorTest extends FlatSpec with GivenWhenThen with AppendedC
     }
     //override sql table
     df.createOrReplaceTempView("airtraffic")
-
-    df.show()
 
     "flightCount" should "calculate the total flighttime per airplane" in {
         val res: Array[(String,Int)] = Array(
@@ -83,7 +81,7 @@ class AirTrafficProcessorTest extends FlatSpec with GivenWhenThen with AppendedC
 
 
     "cancelledDueToSecurity" should "produce a DataFrame having all of the "+
-        "flights which were cancelled due to security" in {
+    "flights which were cancelled due to security" in {
 
         processor.cancelledDueToSecurity(df).collect().isEmpty should equal (true) withClue("Should be empty")
     }
@@ -100,12 +98,12 @@ class AirTrafficProcessorTest extends FlatSpec with GivenWhenThen with AppendedC
 
 
     "flightsFromVegasToJFK" should "tell which airliners travel from Vegas "+
-        "to JFK and how often" in {
+    "to JFK and how often" in {
         processor.flightsFromVegasToJFK(df).collect().isEmpty should equal (true) withClue("should be empty")
     }
 
     "timeSpentTaxiing" should "tell by airport how long airplanes taxi "+
-        "by average" in {
+    "by average" in {
         val res = Array(("PIT",5.0), ("CVG",6.166666666666667), ("ATL",9.0), ("TPA",9.25), ("LGA",10.0), ("BWI",11.0), ("MCO",11.0), ("SNA",14.5), ("SLC",14.5), ("PHL",17.0))
         processor.timeSpentTaxiing(df).collect().map(x => (x.getString(0),x.getDouble(1))).deep should equal (res.deep)
     }
@@ -118,16 +116,18 @@ class AirTrafficProcessorTest extends FlatSpec with GivenWhenThen with AppendedC
         processor.score95(df).collect().map(_.getDouble(0)) should equal (Array(0.0))
     }
 
+
+
     "cancelledFlights" should "tell how likely is it that flight will be "+
-        "cancelled in a specific airport" in {
+     "cancelled in a specific airport" in {
         processor.cancelledFlights(df).collect().isEmpty should equal (true) withClue("should be empty")
-    }
+     }
 
-    "leastSquares" should "estimate the WeatherDelay" in {
+     "leastSquares" should "estimate the WeatherDelay" in {
         processor.leastSquares(df) should equal ((0.0,0.0))
-    }
+     }
 
-    "runningAverage" should "calculate the running average for DepDelay" in {
+     "runningAverage" should "calculate the running average for DepDelay" in {
         processor.runningAverage(df).collect().deep should equal (Array(Row("2008-05-10",3.7)).deep)
-    }
+     }
 }

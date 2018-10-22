@@ -149,7 +149,7 @@ class AirTrafficProcessor(spark: SparkSession,
     */
     def flightCount(df: DataFrame): DataFrame = {
         val result = df.select($"TailNum").groupBy("TailNum").agg(count(lit(1)).as("count")).sort(desc("count"))
-        result.show()
+        //result.show()
         result
     }
 
@@ -173,7 +173,7 @@ class AirTrafficProcessor(spark: SparkSession,
     */
     def cancelledDueToSecurity(df: DataFrame): DataFrame = {
         val result = df.select($"FlightNum", $"Dest").where("CancellationCode = 'D'")
-        result.show()
+        //result.show()
         result
     }
 
@@ -199,7 +199,7 @@ class AirTrafficProcessor(spark: SparkSession,
             (month == 2 && new Range(1, 29, 1).contains(dayOfMonth)) ||
             (month == 3 && new Range(1, 31, 1).contains(dayOfMonth))
         }).toDF().agg(max($"WeatherDelay").as("_c0"))
-        result.show()
+        //result.show()
         result
     }
 
@@ -223,7 +223,7 @@ class AirTrafficProcessor(spark: SparkSession,
         val companiesThatDidFly = df.select($"UniqueCarrier").distinct().map(row => { row.getString(0) }).collect()
 
         val result = this.carriersTable.select($"Code", $"Description").filter(row => {!companiesThatDidFly.contains(row.getString(0))}).drop($"Code")
-        result.show()
+        //result.show()
         result
     }
 
@@ -254,7 +254,7 @@ class AirTrafficProcessor(spark: SparkSession,
         val projectedFlightsFromVegasToJFK = df.select($"UniqueCarrier").where("Origin = 'LAS' AND Dest = 'JFK'").toDF()
 
         val result = projectedFlightsFromVegasToJFK.join(this.carriersTable.withColumnRenamed("Code", "UniqueCarrier"), "UniqueCarrier").select($"Description").groupBy($"Description").count().sort(desc("count")).withColumnRenamed("count", "Num")
-        result.show()
+        //result.show()
         result
     }
 
@@ -302,7 +302,7 @@ class AirTrafficProcessor(spark: SparkSession,
         }).toDF()
 
         val result = taxiMeanInfo.withColumn("taxi", ($"_2" + $"_4") / ($"_3" + $"_5")).select($"_1", $"taxi").withColumnRenamed("_1", "airport").sort(asc("taxi"))
-        result.show()
+        //result.show()
         result
     }
 
@@ -332,7 +332,7 @@ class AirTrafficProcessor(spark: SparkSession,
         }
 
         val result = df.withColumn("_c0", lit(medianValue)).select($"_c0").limit(1).toDF()
-        result.show()
+        //result.show()
         result
     }
 
@@ -352,7 +352,7 @@ class AirTrafficProcessor(spark: SparkSession,
         val percentile = df.select($"CarrierDelay").stat.approxQuantile("CarrierDelay", Array(0.95), 0)(0)
 
         val result = df.withColumn("_c0", lit(percentile)).select($"_c0").limit(1).toDF()
-        result.show()
+        //result.show()
         result
     }
 
@@ -401,7 +401,7 @@ class AirTrafficProcessor(spark: SparkSession,
         }).toDF().withColumnRenamed("_1", "iata").withColumnRenamed("_2", "percentage")
 
         val result = filteredAirportTable.join(averageCancelledFlightsPerAirport, Seq("iata")).select($"airport", $"city", $"percentage").orderBy(desc("percentage"), desc("airport")).where($"percentage" > 0)
-        result.show()
+        //result.show()
         result
     }
 
@@ -508,7 +508,7 @@ class AirTrafficProcessor(spark: SparkSession,
 
         //Calculates the running average for each row, removes unused columns and renames the remaining ones according to specifications.
         val result = tempResult.select($"date", $"sum", $"count").distinct().withColumn("moving_average", $"sum" / $"count").select($"date", $"moving_average")
-        result.show()
+//        //result.show()
         result
     }
 }
