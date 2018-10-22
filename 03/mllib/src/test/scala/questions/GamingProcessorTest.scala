@@ -1,10 +1,5 @@
 package questions
 
-import org.apache.spark.sql.DataFrame
-import org.apache.spark.SparkContext
-import org.apache.spark.sql.Row
-import org.apache.spark.mllib.regression.LabeledPoint
-import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.sql.types._
 
 import org.apache.log4j.Logger
@@ -45,6 +40,7 @@ class GamingProcessorTest extends FlatSpec with GivenWhenThen with AppendedClues
   StructField("game4",DoubleType,false),
   StructField("paid_customer",DoubleType,false)))
 
+    val df = processor.convert(path)
   "convert" should "load the data and return DataFrame" in {
     val attempt = processor.convert(path)
 
@@ -56,9 +52,8 @@ class GamingProcessorTest extends FlatSpec with GivenWhenThen with AppendedClues
 
 
   }
-
   "indexer" should "transform categorical features" in {
-    
+
     val attempt = processor.indexer(parquetPath)
 
     attempt.count() should equal (50) withClue("wrong number of rows.")

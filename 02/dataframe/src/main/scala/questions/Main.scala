@@ -10,19 +10,19 @@ object Main {
   def main(args: Array[String]) = {
 
     Logger.getLogger("org").setLevel(Level.OFF)
-      Logger.getLogger("akka").setLevel(Level.OFF)
+    Logger.getLogger("akka").setLevel(Level.OFF)
 
     val spark = SparkSession.builder
-      .master("local[*]")
-      .appName("main")
-      .config("spark.driver.memory", "5g")
-      .config("spark.dynamicAllocation.enabled","true")
-      .config("spark.shuffle.service.enabled","true")
-      .getOrCreate()
+        .master("local[*]")
+        .appName("main")
+        .config("spark.driver.memory", "5g")
+        .config("spark.dynamicAllocation.enabled","true")
+        .config("spark.shuffle.service.enabled","true")
+        .getOrCreate()
 
-      val filePath = getClass().getResource("/2008.csv").toString
-      val airportsPath = getClass().getResource("/airports.csv").toString
-      val carriersPath = getClass().getResource("/carriers.csv").toString
+    val filePath = getClass().getResource("/sample.csv").toString
+    val airportsPath = getClass().getResource("/airports.csv").toString
+    val carriersPath = getClass().getResource("/carriers.csv").toString
 
     val processor = new AirTrafficProcessor(spark, filePath, airportsPath, carriersPath)
     val data = processor.loadDataAndRegister(filePath)
@@ -46,9 +46,7 @@ object Main {
     // println("<<<cancelled flights>>>")
     // processor.cancelledFlights().show()
     //println("least squares: " + processor.leastSquares())
-    
 
     spark.stop()
   }
-
 }

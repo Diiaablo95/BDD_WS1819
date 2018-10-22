@@ -72,7 +72,16 @@ class GamingProcessor() {
   * @return converted DataFrame
   */
   def convert(path: String): DataFrame = {
-    ???
+
+      val initialCSV = this.spark.read.csv(path).map(row => {
+          val gender: Double = if (row.getString(3).equals("male")) 1 else 0
+          val paidCustomer: Double = if (row.getString(15).equals("yes")) 0 else 1
+
+          (gender, row.getString(4).toDouble, row.getString(6), row.getString(8).toDouble, row.getString(9).toDouble, row.getString(10).toDouble, row.getString(11).toDouble, row.getString(12).toDouble, row.getString(13).toDouble, paidCustomer)
+      }).toDF("gender", "age", "country", "friend_count", "lifetime", "game1", "game2", "game3", "game4", "paid_customer")
+
+//      initialCSV.show()
+      initialCSV
   }
 
   /**
@@ -97,19 +106,25 @@ class GamingProcessor() {
   * @return Dataframe
   */
   def indexer(df: DataFrame): DataFrame = {
-    ???
+      val result = new StringIndexer().setInputCol("country").setOutputCol("country_index").fit(df).transform(df)
+
+//      result.show()
+      result
   }
 
   /**
   * Combine features into one vector. Most mllib algorithms require this step
-  * https://spark.apache.org/docs/latest/ml-features.html#vectorassembler
+  *
   * Column name should be 'features'
   *
   * @param Dataframe that is transformed using indexer
   * @return Dataframe
   */
   def featureAssembler(df: DataFrame): DataFrame = {
-    ???
+      val result = new VectorAssembler().setInputCols(Array("gender", "age", "country_index", "friend_count", "lifetime", "game1", "game2", "game3", "game4", "paid_customer")).setOutputCol("features").transform(df)
+
+//      result.show()
+      result
   }
 
   /**
@@ -121,7 +136,10 @@ class GamingProcessor() {
   * @return Dataframe
   */
   def scaler(df: DataFrame, outputColName: String): DataFrame = {
-    ???
+      val result = new StandardScaler().setInputCol("features").setOutputCol(outputColName).setWithStd(true).setWithMean(true).fit(df).transform(df)
+
+//      result.show()
+      result
   }
 
   /**
@@ -135,7 +153,9 @@ class GamingProcessor() {
   * @return trained LogisticRegressionModel
   */
   def createModel(training: DataFrame, featuresCol: String, labelCol: String, predCol: String): LogisticRegressionModel = {
-    ???
+      val logisticRegressionModel = new LogisticRegression().setMaxIter(5).setFeaturesCol(featuresCol).setLabelCol(labelCol).setPredictionCol(predCol).setRegParam(0.3).setElasticNetParam(0.8).fit(training)
+
+      logisticRegressionModel
   } 
 
 
@@ -149,7 +169,10 @@ class GamingProcessor() {
   * @return DataFrame predicted scores (1.0 == yes, 0.0 == no)
   */
   def predict(model: LogisticRegressionModel, dataToPredict: DataFrame): DataFrame = {
-    ???
+      val result = model.transform(dataToPredict)
+
+      result.show()
+      result
   }
 
 }
